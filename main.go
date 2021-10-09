@@ -97,7 +97,7 @@ func main() {
 	}
 	
 	
-	var mongoURI string = "mongodb+srv://dbUser:dbPassw0rd@cluster0.xqhl1.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
+	var mongoURI string = "mongodb+srv://dbUser:<redacted>@cluster0.xqhl1.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
 	
 	// setup connection with mongoDb cluster
 	
