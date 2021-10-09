@@ -7,6 +7,11 @@ import (
 	"regexp"
 	"encoding/json"
 	"strconv"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"context"
+	"time"
+	"crypto/md5"
 )
 
 type Handler func(*Context)
@@ -78,6 +83,8 @@ type Context struct {
 
 var Users []User
 var Posts []Post
+var ctx = context.TODO()
+var collection *mongo.Collection
 
 func main() {
 	Users = []User{
@@ -88,16 +95,36 @@ func main() {
 		Post{Id:6, Caption : "First post", Image_url : "htsdfdds", Posted_time : "34:24:34"},
 		Post{Id:18, Caption : "second post", Image_url : "htds", Posted_time : "31:45:53"},
 	}
+	
+	
+	var mongoURI string = "mongodb+srv://dbUser:dbPassw0rd@cluster0.xqhl1.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
+	
+	// setup connection with mongoDb cluster
+	
+	clientOptions := options.Client().ApplyURI(mongoURI)
+	client, err := mongo.Connect(ctx, clientOptions)
+	if err != nil { log.Fatal(err) }
+	collection = client.Database("tasker").Collection("tasks")
+	
 	app := NewApp()
 	
 		
 	app.Handle(`/users/([^/]+)$`, func(ctx *Context) {
 		if ctx.Request.Method == "GET" {
-			for i:=0; i < len(Users); i++ {
-				if strconv.Itoa(Users[i].Id) == ctx.Params[0] {
-				json.NewEncoder(ctx.ResponseWriter).Encode(Users[i])	
-				}
+			var user User
+			var id, erro = strconv.Atoi(ctx.Params[0])
+			if erro == nil {
+				fmt.Println("")
 			}
+			fmt.Println(id)
+			collection := client.Database("trial").Collection("users")
+			ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+			err := collection.FindOne(ctx, User{Id: id}).Decode(&user)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			fmt.Println(user)
+			//json.NewEncoder(ctx.ResponseWriter).Encode(user)
 		}
 		
 	})
@@ -120,7 +147,11 @@ func main() {
 			var email = ctx.Request.FormValue("Email")
 			var password = ctx.Request.FormValue("Password")
 			var tmp = User{Id: 3, Name : name, Email : email, Password : password}
-			json.NewEncoder(ctx.ResponseWriter).Encode(tmp)
+			collection := client.Database("trial").Collection("users")
+			tmp.Password = fmt.Sprint(md5.Sum([]byte(tmp.Password)))
+			ctx2, _ := context.WithTimeout(context.Background(), 10*time.Second)
+			result, _ := collection.InsertOne(ctx2, tmp)
+			json.NewEncoder(ctx.ResponseWriter).Encode(result)
 		}
 	})
 	
@@ -131,16 +162,19 @@ func main() {
 			var image_url = ctx.Request.FormValue("Image URL")
 			var posted_time = ctx.Request.FormValue("Posted time")
 			var tmp = Post{Id: 3, Caption : caption, Image_url : image_url, Posted_time : posted_time}
-			json.NewEncoder(ctx.ResponseWriter).Encode(tmp)
+			collection := client.Database("trial").Collection("posts")
+			ctx2, _ := context.WithTimeout(context.Background(), 10*time.Second)
+			result, _ := collection.InsertOne(ctx2, tmp)
+			json.NewEncoder(ctx.ResponseWriter).Encode(result)
 		}
 	})
 	
 
 
-	err := http.ListenAndServe(":9000", app)
+	err2 := http.ListenAndServe(":9000", app)
 
-	if err != nil {
-		log.Fatalf("Could not start server: %s\n", err.Error())
+	if err2 != nil {
+		log.Fatalf("Could not start server: %s\n", err2.Error())
 	}
 
 }
